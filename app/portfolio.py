@@ -252,6 +252,41 @@ class Portfolio():
         print(f"The total value of satellite and core portfolio after rebalancing would be ${round(total_after_rebalancing, 2)}")
 
 
+    def add_ticker(self, ticker: str, exchange: str, quantity: int, currency: str, closing_price: float = None) -> dict:
+        """
+        Adds a new ticker to the portfolio. Attempts to fetch the current price from
+        the API if no price is provided. Returns a dict with success status and message.
+        """
+        ticker = ticker.upper().strip()
+        if ticker in self.portfolio.index:
+            return {'success': False, 'message': f'{ticker} is already in the portfolio.'}
+
+        update_date = pd.Timestamp.now()
+        if closing_price is None:
+            try:
+                stock_pricer = StockPricer()
+                result = stock_pricer.get_price(ticker, exchange)
+                if result:
+                    closing_price, update_date = result
+                    update_date = pd.Timestamp(update_date)
+                else:
+                    return {'success': False, 'message': f'Could not fetch price for {ticker}. Enter a price manually.'}
+            except Exception as e:
+                logger.error('Failed to fetch price for new ticker %s: %s', ticker, e)
+                return {'success': False, 'message': f'Could not fetch price for {ticker}. Enter a price manually.'}
+
+        new_row = pd.DataFrame({
+            'exchange': [exchange.upper()],
+            'quantity': [int(quantity)],
+            'currency': [currency.upper()],
+            'closing_price': [float(closing_price)],
+            'update_date': [update_date],
+        }, index=pd.Index([ticker], name='ticker'))
+
+        self.portfolio = pd.concat([self.portfolio, new_row])
+        logger.info('Added new ticker %s to portfolio', ticker)
+        return {'success': True, 'message': f'{ticker} added successfully.'}
+
     def get_no_sell_report_data(self) -> dict:
         """Returns no-sell rebalancing report as a dict for use by the web interface."""
         self.core_portfolio = self._rebalance_no_sell(self.core_portfolio)

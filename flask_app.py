@@ -130,6 +130,33 @@ def update_quantity():
     return redirect(url_for('dashboard'))
 
 
+@app.route('/add-ticker', methods=['POST'])
+@login_required
+def add_ticker():
+    ticker = request.form.get('ticker', '').upper().strip()
+    exchange = request.form.get('exchange', '').upper().strip()
+    currency = request.form.get('currency', '').upper().strip()
+    price_input = request.form.get('closing_price', '').strip()
+    try:
+        quantity = int(request.form.get('quantity', 0))
+        if quantity < 0:
+            raise ValueError('Quantity must be zero or greater.')
+        closing_price = float(price_input) if price_input else None
+        p = load_portfolio()
+        result = p.add_ticker(ticker, exchange, quantity, currency, closing_price)
+        if result['success']:
+            p.save_portfolio()
+            flash(result['message'], 'success')
+        else:
+            flash(result['message'], 'danger')
+    except ValueError as e:
+        flash(f'Invalid input: {e}', 'danger')
+    except Exception as e:
+        logger.error('Add ticker error: %s', e, exc_info=True)
+        flash(f'Error adding {ticker}: {e}', 'danger')
+    return redirect(url_for('dashboard'))
+
+
 @app.route('/invest', methods=['POST'])
 @login_required
 def invest():
