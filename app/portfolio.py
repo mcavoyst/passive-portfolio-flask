@@ -100,9 +100,11 @@ class Portfolio():
     def save_portfolio(self):
         """
         Saves the current portfolio to the file specified during initialization.
+        Only the core columns are saved; calculated columns are excluded.
         """
         logger.info("Saving portfolio data to %s", self.filepath)
-        self.portfolio.to_csv(self.filepath, index_label='ticker')
+        core_columns = ['exchange', 'quantity', 'currency', 'closing_price', 'update_date']
+        self.portfolio[core_columns].to_csv(self.filepath, index_label='ticker')
 
     def _core_satellite_portfolio_split(self, portfolio: pd.DataFrame) -> tuple:
         """
