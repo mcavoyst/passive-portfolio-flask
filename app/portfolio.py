@@ -73,7 +73,7 @@ class Portfolio():
         logger.info("Initializing Portfolio with filepath: %s", data_filepath)
         self.filepath = data_filepath
         portfolio = pd.read_csv(data_filepath, index_col='ticker')
-        portfolio.update_date = pd.to_datetime(portfolio.update_date)
+        portfolio.update_date = pd.to_datetime(portfolio.update_date, format='mixed', utc=True)
         logger.debug("Loaded portfolio data")
         return portfolio
 
@@ -100,9 +100,11 @@ class Portfolio():
     def save_portfolio(self):
         """
         Saves the current portfolio to the file specified during initialization.
+        Only the core columns are saved; calculated columns are excluded.
         """
         logger.info("Saving portfolio data to %s", self.filepath)
-        self.portfolio.to_csv(self.filepath, index_label='ticker')
+        core_columns = ['exchange', 'quantity', 'currency', 'closing_price', 'update_date']
+        self.portfolio[core_columns].to_csv(self.filepath, index_label='ticker')
 
     def _core_satellite_portfolio_split(self, portfolio: pd.DataFrame) -> tuple:
         """
@@ -261,14 +263,14 @@ class Portfolio():
         if ticker in self.portfolio.index:
             return {'success': False, 'message': f'{ticker} is already in the portfolio.'}
 
-        update_date = pd.Timestamp.now()
+        update_date = pd.Timestamp.now(tz='UTC')
         if closing_price is None:
             try:
                 stock_pricer = StockPricer()
                 result = stock_pricer.get_price(ticker, exchange)
                 if result:
                     closing_price, update_date = result
-                    update_date = pd.Timestamp(update_date)
+                    update_date = pd.Timestamp(update_date, tz='UTC')
                 else:
                     return {'success': False, 'message': f'Could not fetch price for {ticker}. Enter a price manually.'}
             except Exception as e:

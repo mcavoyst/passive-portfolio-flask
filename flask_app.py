@@ -135,7 +135,7 @@ def update_quantity():
 def add_ticker():
     ticker = request.form.get('ticker', '').upper().strip()
     exchange = request.form.get('exchange', '').upper().strip()
-    currency = request.form.get('currency', '').upper().strip()
+    currency = 'CAD' if exchange == 'XTSE' else 'USD'
     price_input = request.form.get('closing_price', '').strip()
     try:
         quantity = int(request.form.get('quantity', 0))
