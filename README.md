@@ -1,120 +1,111 @@
 # Passive Portfolio Rebalancer
 
-Passive Portfolio Rebalancer is a simple command-line tool designed to help you maintain your desired asset allocation in a stock portfolio. Given your current portfolio and a target allocation, it calculates which assets to buy or sell to achieve the specified balance. 
+A tool to help you maintain your desired asset allocation in a passive stock portfolio. Given your current holdings and a target allocation, it calculates what to buy to rebalance — without selling.
+
+Available as both a **web app** (Flask) and a **command-line tool**.
 
 ## Features
-- **Load Portfolio**: Reads your current stock holdings.
-- **Set Target Allocation**: Define your desired allocation by ticker symbol.
-- **Rebalance Suggestions**: Generates buy/sell recommendations to meet the target allocation.
-- **Simple CLI Interface**: Operate entirely from the command line.
-- **Split Core and Satellite Portfolio**: Splits portfolio based on a "core" investing portfolio which will be passively invested vs an actively managed "satellite" portfolio. 
-- ***NEW***- **Investment Splitter**: Determine what to purchase to maintain your portfolio's desired asset allocation, without selling
-- Rebalancing will only be calculated on the core portfolio.
-Note:
-The default currency is Canadian Dollars and USD are converted based on the current exchange rate.
+
+- **Dashboard**: View your full portfolio at a glance — holdings, values, and last update dates
+- **Core / Satellite Split**: Rebalancing is calculated only on your "core" passive holdings; the "satellite" portfolio is tracked but not touched
+- **No-Sell Rebalancing**: Calculates what to buy to hit your target allocation without selling existing positions
+- **Investment Scenario**: Given a cash amount, shows exactly what to buy and in what order to best maintain your allocation
+- **Live Prices**: Fetches current closing prices via the MarketStack API
+- **Exchange Rate**: Converts USD holdings to CAD using the ExchangeRates API (with fallback to a local backup)
+- **Add New Tickers**: Add new stocks to your portfolio directly from the web interface
+- **Password Protected**: Simple session-based authentication for the web app
 
 ## Installation
 
-1. **Clone the Repository**:
+1. **Clone the repository**
     ```bash
-    git clone https://github.com/mcavoyst/passive-portfolio.git
-    cd passive-portfolio
+    git clone https://github.com/mcavoyst/passive-portfolio-flask.git
+    cd passive-portfolio-flask
     ```
 
-2. **Install Dependencies**:
+2. **Create and activate a virtual environment**
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+
+3. **Install dependencies**
     ```bash
     pip install -r requirements.txt
     ```
-3. **API Keys**
-   Two API keys are required from:
-   1. http://api.marketstack.com for current stock price
-   2. http://api.exchangeratesapi.io for current CAD/USD exachange rate.
-   Store the API key in a `.env` in the root directory:
-```
-PRICE_API_KEY=XXXXYYYYY11111433333
-EXCHANGE_API_KEY=XXXXXXXXXYYYYYZZZZZZZZ111223
-```
-4. Add data into the `/data` folder in the same format as in the `/example` folder. The allocations in the `model_portfolio.csv` are your target asset allocations and must add to 100% while the `portfolio_data.csv` are the total quanity of securities owned without duplicates. The `exchange_rate.txt` file should be placed in the `/data` folder and is only used if the API does not connect.
+
+4. **API keys**
+
+    Two API keys are required:
+    - [MarketStack](http://api.marketstack.com) — current stock prices
+    - [ExchangeRates API](http://api.exchangeratesapi.io) — CAD/USD exchange rate
+
+    Create a `.env` file in the root directory:
+    ```
+    PRICE_API_KEY=your_marketstack_key
+    EXCHANGE_API_KEY=your_exchangerates_key
+    FLASK_SECRET_KEY=some_long_random_string
+    APP_PASSWORD=your_chosen_password
+    ```
+
+5. **Add your data**
+
+    Place the following files in the `/data` folder (see `/example` for formatting):
+    - `portfolio_data.csv` — your current holdings (ticker, exchange, quantity, currency, closing_price, update_date)
+    - `model_portfolio.csv` — your target allocations by ticker (must sum to 1.00)
+    - `exchange_rate.txt` — fallback exchange rate used if the API is unavailable
 
 ## Usage
 
-### 1. Prepare Your Files
-- **Current Portfolio**: A CSV file with your current portfolio data. `model_portfolio.csv` is an example of how to format the data. Currently there is no way to add in new stock using the app, but this can be changed in the future.
-- **Target Allocation**: A csv file with your target allocations.
+### Web App (recommended)
 
-### 2. Run the Tool
 ```bash
-python3 app/main.py 
+./run.sh
 ```
-### 3. Output
+
+Then open [http://localhost:8080](http://localhost:8080) and log in with your `APP_PASSWORD`.
+
+From the dashboard you can:
+- **Fetch Latest Prices** — updates all closing prices from the API and saves to CSV
+- **Update Quantity** — set the current number of shares held for any ticker
+- **Add New Ticker** — add a stock with auto-fetched or manually entered price
+- **Investment Scenario** — enter a cash amount to see what to buy to best maintain your allocation
+- **Rebalancing Report** — always visible; shows shares to buy and total cost to rebalance
+
+### Command Line
+
 ```bash
-Do you want to update the prices? (y/n)
-```
-Select y if you want to check for the current price using the market API. The output will be:
-```
-+--------+----------+---------------+---------------------------+--------------------+----------+
-| ticker | quantity | closing_price |        update_date        |    total_value     | currency |
-+--------+----------+---------------+---------------------------+--------------------+----------+
-|  VFV   |  23940   |    148.07     | 2024-11-08 00:00:00+00:00 |     3544795.8      |   CAD    |
-|  ZNQ   |  19068   |     95.12     | 2024-11-08 00:00:00+00:00 | 1813748.1600000001 |   CAD    |
-|  XIU   |  26712   |     37.61     | 2024-11-08 00:00:00+00:00 |     1004638.32     |   CAD    |
-|  XRE   |  19824   |     16.75     | 2024-08-30 00:00:00+00:00 |      332052.0      |   CAD    |
-|  XIN   |   8148   |     36.29     | 2024-11-08 00:00:00+00:00 |     295690.92      |   CAD    |
-|  XIT   |   1428   |     62.11     | 2024-11-08 00:00:00+00:00 |      88693.08      |   CAD    |
-|  PLTR  |   588    |     58.39     | 2024-11-08 00:00:00+00:00 |      34333.32      |   USD    |
-+--------+----------+---------------+---------------------------+--------------------+----------+
-```
-If you want to update the quantities of any stock in the list, just input the ticker and the new total quantity. Otherwise, type `*`.
-```
-Which stock do you want to update? If none, type "*"
-```
-Once * is entered the following table will be displayed showing the number of each asset that would need to be purchased to rebalance the portfolio if you were to not sell any of the existing stock. Additional functionality can be added to show the number of assets to rebalance with buying and selling in the future.
-```
-+--------+----------+---------------+-------------------------+----------------------------+--------------------------+---------------------------+
-| ticker | quantity | closing_price | target_quantity_no_sell | rebalance_quantity_no_sell | rebalancing_cost_no_sell |        update_date        |
-+--------+----------+---------------+-------------------------+----------------------------+--------------------------+---------------------------+
-|  XIU   |  26712   |     37.61     |          28936          |            2224            |         83644.64         | 2024-11-08 00:00:00+00:00 |
-|  VFV   |  23940   |    148.07     |          24499          |            559             |    82771.12999999999     | 2024-11-08 00:00:00+00:00 |
-|  XIN   |   8148   |     36.29     |          9996           |            1848            |         67063.92         | 2024-11-08 00:00:00+00:00 |
-|  XRE   |  19824   |     16.75     |          21657          |            1833            |         30702.75         | 2024-08-30 00:00:00+00:00 |
-|  ZNQ   |  19068   |     95.12     |          19068          |             0              |           0.0            | 2024-11-08 00:00:00+00:00 |
-+--------+----------+---------------+-------------------------+----------------------------+--------------------------+---------------------------+
-The cost to rebalance the core portfolio is $264182.44
-
-This would make the total value of the portfolio: $7255107.64
-The total value of satellite and core portfolio after rebalancing would be $7378134.04
-```
-If you have a set amount you want to invest, enter it here and it will determine how to spend it
-```
-Do you have money you want to invest?
-If yes, type the amount. If no, type "n" 1500
-
-The following can be purchased with 1500.0
-
-+--------+----------+---------------+-----------+
-| ticker | quantity | purchase_cost | unit_cost |
-+--------+----------+---------------+-----------+
-|  VFV   |   8.0    |    1182.8     |  147.85   |
-|  ZNQ   |   3.0    |    290.46     |   96.82   |
-|  XRE   |   1.0    |     15.19     |   15.19   |
-|  XEF   |   0.0    |      0.0      |    nan    |
-|  XIU   |   0.0    |      0.0      |    nan    |
-+--------+----------+---------------+-----------+
-Total spent: 1488.45
-```
-Finally, to save the changes made to the closing price and the actual quantities of the assets in `portfolio_data.csv` in your portfolio type `y`.
-```
-Do you want to save and overwrite? (y/n)
+python3 app/main.py
 ```
 
-## Configuration
-You can adjust various settings in config.py to match your preferences, such as transaction limits or minimum cash reserve.
+Follow the prompts to update prices, adjust quantities, view the rebalancing report, and run an investment scenario.
 
-## Example
-Data in `/example` can be used to start and to check desired formatting.
+## Data Format
 
-## Contributing
-Feel free to submit issues or pull requests to improve the functionality or add new features.
+**`portfolio_data.csv`**
+```
+ticker,exchange,quantity,currency,closing_price,update_date
+VFV,XTSE,385,CAD,179.42,2026-05-08 00:00:00+00:00
+PLTR,XNYS,10,USD,137.80,2026-05-08 00:00:00+00:00
+```
+
+**`model_portfolio.csv`**
+```
+ticker,target_allocation
+VFV,0.525
+XIU,0.15
+```
+Allocations must sum to exactly 1.00.
+
+## Supported Exchanges
+
+| Code | Exchange | Currency |
+|------|----------|----------|
+| XTSE | Toronto Stock Exchange | CAD |
+| XNYS | New York Stock Exchange | USD |
+| ARCX | NYSE Arca | USD |
+| XNAS | NASDAQ | USD |
 
 ## License
-This project is licensed under the MIT License.
+
+MIT
